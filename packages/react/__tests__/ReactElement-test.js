@@ -214,13 +214,16 @@ describe('ReactElement', () => {
 		expect(element.constructor).toBe(object.constructor);
 	});
 
-	it('does not warn for NaN props', () => {
-		function Test() {
+	it('passes NaN props to a function component', () => {
+		const receivedProps = jest.fn();
+		function Test(props) {
+			receivedProps(props);
 			return <div />;
 		}
 
-		const test = ReactTestUtils.renderIntoDocument(<Test value={+undefined} />);
-		expect(test.props.value).toBeNaN();
+		ReactTestUtils.renderIntoDocument(<Test value={+undefined} />);
+		expect(receivedProps).toHaveBeenCalledTimes(1);
+		expect(receivedProps.mock.calls[0][0].value).toBeNaN();
 	});
 
 	// // NOTE: We're explicitly not using JSX here. This is intended to test

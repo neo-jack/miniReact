@@ -1,3 +1,5 @@
+/// <reference path="./reconciler.d.ts" />
+
 import { Props, Key, Ref } from 'shared/ReactTypes';
 import { WorkTag } from './workTags';
 import { Flags, NoFlags } from './FiberFlags';
