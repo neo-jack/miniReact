@@ -1,12 +1,13 @@
 {
 	"compileOnSave": true,
-	"include": ["./packages/**/*", "packages/react/__tests__"],
+	"include": ["./packages/**/*", "packages/react/__tests__", "./demos/**/*"],
 	"compilerOptions": {
 		"target": "ESNext",
 		"useDefineForClassFields": true,
 		"module": "ESNext",
 		"lib": ["ESNext", "DOM"],
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
+		"jsx": "react-jsxdev",
 		"strict": true,
 		"sourceMap": true,
 		"resolveJsonModule": true,
@@ -17,9 +18,9 @@
 		"noUnusedParameters": false,
 		"noImplicitReturns": false,
 		"skipLibCheck": true,
-		"baseUrl": "./packages",
 		"paths": {
-			"hostConfig": ["./react-dom/src/hostConfig.ts"]
+			"hostConfig": ["./packages/react-dom/src/hostConfig.ts"],
+			"*": ["./packages/*"]
 		}
 	}
 }

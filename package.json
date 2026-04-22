@@ -1,9 +1,11 @@
 {
 	"name": "my-react",
 	"version": "1.0.0",
+	"packageManager": "pnpm@10.34.5",
 	"description": "",
 	"main": "index.js",
 	"scripts": {
+		"start": "vite serve demos --host 0.0.0.0 --port 5173 --strictPort --config script/vite/vite.config.js",
 		"lint": "eslint --ext .ts,.jsx,.tsx --fix --quiet ./packages",
 		"build-dev": "rimraf dist && rollup --config script/rollup/dev.config.js --bundleConfigAsCjs",
 		"demo": "vite serve demos --force --config script/vite/vite.config.js",
