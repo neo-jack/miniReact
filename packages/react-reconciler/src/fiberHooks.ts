@@ -27,6 +27,8 @@ interface Hook {
 export function renderWithHooks(wip: FiberNode) {
 	//赋值操作
 	currentlyRenderingFiber = wip;
+	workInProgressHook = null;
+	currentHook = null;
 	//重置
 	wip.memoizedState = null;
 
@@ -42,13 +44,14 @@ export function renderWithHooks(wip: FiberNode) {
 
 	const Component = wip.type;
 	const props = wip.penddingProps;
-	const children = Component(props);
-
-	//重置操作
-	currentlyRenderingFiber = null;
-	workInProgressHook = null; //！
-
-	return children;
+	try {
+		return Component(props);
+	} finally {
+		currentlyRenderingFiber = null;
+		workInProgressHook = null;
+		currentHook = null;
+		currentDispatcher.current = null;
+	}
 }
 
 const HookDispatcherOnMount: Dispatcher = {
@@ -68,6 +71,7 @@ function updateState<State>(
 	//计算新state的逻辑
 	const queue = hook.updateQueue as UpdateQueue<State>;
 	const pending = queue.shared.pending;
+	queue.shared.pending = null;
 	if (pending != null) {
 		const { memoizedState } = processUpdateQueue(hook.memoizedState, pending);
 		hook.memoizedState = memoizedState;
@@ -77,14 +81,17 @@ function updateState<State>(
 }
 
 function updateWorkInProgresHook(): Hook {
+	if (currentlyRenderingFiber === null) {
+		throw new Error('请在函数组件内调用hook');
+	}
 	//TODO render阶段触更新
 	//交互更新-	render更新
 	let nextCurrentHook: Hook | null;
 
 	if (currentHook === null) {
-		const current = currentlyRenderingFiber?.alternate;
+		const current = currentlyRenderingFiber.alternate;
 		if (current !== null) {
-			nextCurrentHook = current?.memoizedState;
+			nextCurrentHook = current.memoizedState;
 		} else {
 			nextCurrentHook = null;
 		}

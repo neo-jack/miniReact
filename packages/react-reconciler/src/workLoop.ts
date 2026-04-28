@@ -15,7 +15,9 @@ function prepareFreshStack(root: FiberRootNode) {
 export function scheduleUpdateOnFiber(fiber: FiberNode) {
 	//调度功能
 	const root = markUpdateFromFiberToRoot(fiber);
-	rendeRoot(root);
+	if (root !== null) {
+		rendeRoot(root);
+	}
 }
 
 //找到FiberRootNode
@@ -37,18 +39,13 @@ function markUpdateFromFiberToRoot(fiber: FiberNode) {
 //通过Dfs实现渲染更新
 function rendeRoot(root: FiberRootNode) {
 	prepareFreshStack(root);
-	do {
-		try {
-			workloop();
-			break;
-		} catch (e) {
-			if (__DEV__) {
-				console.warn('workloop发送错误', e);
-			}
-
-			workInProgress = null;
-		}
-	} while (true);
+	try {
+		workloop();
+	} catch (error) {
+		workInProgress = null;
+		root.finishework = null;
+		throw error;
+	}
 
 	const finishework = root.current.alternate;
 

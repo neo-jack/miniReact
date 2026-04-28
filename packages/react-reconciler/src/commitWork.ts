@@ -60,7 +60,8 @@ const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
 				commitDeletion(childDeletion);
 			});
 		}
-		finishedWork.flags &= ~Update;
+		finishedWork.flags &= ~ChildDeletion;
+		finishedWork.deletions = null;
 	}
 };
 
@@ -95,7 +96,7 @@ function commitDeletion(childToDelete: FiberNode) {
 		const hostParent = getHostParent(childToDelete);
 		//
 		if (hostParent !== null) {
-			removeChild(rootHostNode, hostParent);
+			removeChild((rootHostNode as FiberNode).stateNode, hostParent);
 		}
 	}
 	childToDelete.return = null;
@@ -111,7 +112,7 @@ function commitNestedComponent(
 		onCommitUnmount(node);
 		if (node.child !== null) {
 			node.child.return = node;
-			node.child;
+			node = node.child;
 			continue;
 		}
 		if (node === root) {

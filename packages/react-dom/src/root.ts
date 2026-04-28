@@ -15,7 +15,7 @@ const root = createContainer(container);
 		console.log("版本0.0.1")
 	}
 	return {
-		render(element: ReactElementType) {
+		render(element: ReactElementType | null) {
 			updatedContainer(element, root);
 		}
 	};
