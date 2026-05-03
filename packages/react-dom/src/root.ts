@@ -6,10 +6,12 @@ import {
 	updatedContainer
 } from 'react-reconciler/src/fiberReconciler';
 import { ReactElementType } from 'shared/ReactTypes';
+import { initEvent } from './SyntheticEvent';
 
 export function createRoot(container: Container ) {
 
 const root = createContainer(container);
+	initEvent(container);
 	if(__DEV__)
 	{
 		console.log("版本0.0.1")

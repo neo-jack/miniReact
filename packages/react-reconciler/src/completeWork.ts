@@ -27,9 +27,10 @@ export const completeWork = (wip: FiberNode) => {
 		case HostComponent:
 			if (current !== null && wip.stateNode) {
 				//update
+				if (current.memoizedProps !== newProps) markUpdate(wip);
 			} else {
 				//构建dom
-				const instance = createInstance(wip.type);
+				const instance = createInstance(wip.type, newProps);
 				//讲dom插入到dom树中
 				appendALLChildren(instance, wip);
 				wip.stateNode = instance;
