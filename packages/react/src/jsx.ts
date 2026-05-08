@@ -26,7 +26,7 @@ export function isValidElement(object: any) {
 
 export const Fragment = REACT_FRAGMENT_TYPE;
 
-export const jsx = (type: ElementType, config: any, ...maybeChildren: any) => {
+export const createElement = (type: ElementType, config: any, ...maybeChildren: any) => {
 	let key: Key = null;
 	const props: Props = {};
 	let ref: Ref = null;
@@ -61,8 +61,8 @@ export const jsx = (type: ElementType, config: any, ...maybeChildren: any) => {
 	return ReactElement(type, key, ref, props);
 };
 
-export const jsxDEV = (type: ElementType, config: any) => {
-	let key: Key = null;
+export const jsx = (type: ElementType, config: any, maybeKey?: any) => {
+	let key: Key = maybeKey === undefined ? null : '' + maybeKey;
 	let ref: Ref = null;
 	const props: Props = {};
 	for (const prop in config) {
@@ -85,3 +85,6 @@ export const jsxDEV = (type: ElementType, config: any) => {
 	}
 	return ReactElement(type, key, ref, props);
 };
+
+export const jsxDEV = jsx;
+export const jsxs = jsx;

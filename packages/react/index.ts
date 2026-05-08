@@ -1,4 +1,4 @@
-import { jsx, jsxDEV, isValidElement as isValidElementFN } from './src/jsx';
+import { createElement as createElementFN, isValidElement as isValidElementFN } from './src/jsx';
 import currentDispatcher from './src/currentDispatcher';
 import { resolveDispatcher, Dispatcher } from './src/currentDispatcher';
 
@@ -13,5 +13,5 @@ export const __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
 
 export const version = '0.0.0';
 //TODO: 根据环境去修改
-export const createElement = jsx;
+export const createElement = createElementFN;
 export const isValidElement = isValidElementFN;
