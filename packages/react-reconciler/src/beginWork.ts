@@ -3,6 +3,7 @@ import { FiberNode } from './fiber';
 import { UpdateQueue, processUpdateQueue } from './updateQueue';
 import {
 	FunctionComponent,
+	Fragment,
 	HostComponent,
 	HostRoot,
 	HostText
@@ -16,6 +17,7 @@ export const beginWork = (wip: FiberNode) => {
 		case HostRoot:
 			return updateHostRoot(wip);
 		case HostComponent:
+		case Fragment:
 			return updateHostComponent(wip);
 		case HostText:
 			return null;

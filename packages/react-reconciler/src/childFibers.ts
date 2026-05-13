@@ -1,11 +1,11 @@
-import { REACT_ELEMENT_TYPE } from 'shared/ReactSymbols';
+import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from 'shared/ReactSymbols';
 import { Props, ReactElementType } from 'shared/ReactTypes';
 import {
 	createWorkInProgress,
 	FiberNode
 } from './fiber';
 import { ChildDeletion, Placement } from './FiberFlags';
-import { HostText, HostComponent, FunctionComponent, WorkTag } from './workTags';
+import { HostText, HostComponent, FunctionComponent, Fragment, WorkTag } from './workTags';
 
 type ExistingChildren = Map<string | number, FiberNode>;
 
@@ -181,6 +181,16 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 	): FiberNode | null {
 		const keyToUse = element != null && element.key != null ? element.key : index;
 		const before = existingChildren.get(keyToUse);
+		if (Array.isArray(element)) {
+			if (before?.tag === Fragment) {
+				existingChildren.delete(keyToUse);
+				return useFiber(before, { children: element });
+			}
+			return createFiberFromElement({
+				$$typeof: REACT_ELEMENT_TYPE, type: REACT_FRAGMENT_TYPE,
+				key: null, ref: null, props: { children: element }, __mark: 'Alan'
+			});
+		}
 
 		// HostText
 		if (typeof element === 'string' || typeof element === 'number') {
@@ -268,7 +278,9 @@ export const mountChildFibers = ChildReconciler(false);
 export function createFiberFromElement(element: ReactElementType): FiberNode {
 	const { type, key, props } = element;
 	let fiberTag: WorkTag = FunctionComponent;
-	if (typeof type === 'string') {
+	if (type === REACT_FRAGMENT_TYPE) {
+		fiberTag = Fragment;
+	} else if (typeof type === 'string') {
 		fiberTag = HostComponent;
 	} else if (typeof type !== 'function' && __DEV__) {
 		console.warn('未定义的type类型', element);

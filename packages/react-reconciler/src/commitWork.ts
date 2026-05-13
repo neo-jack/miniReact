@@ -68,39 +68,22 @@ const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
 };
 
 function commitDeletion(childToDelete: FiberNode) {
-	let rootHostNode: FiberNode | null = null;
-	//递归子树
-	commitNestedComponent(childToDelete, (ummountFiber) => {
-		switch (ummountFiber.tag) {
-			case HostComponent:
-				//解绑ref
-				if (rootHostNode === null) {
-					rootHostNode = ummountFiber;
-				}
-				return;
-			case HostText:
-				if (rootHostNode === null) {
-					rootHostNode = ummountFiber;
-				}
-				return;
-			case FunctionComponent:
-				//ueseffect unmount
-				return;
-			default:
-				if (__DEV__) {
-					console.warn('未处理的ummount类型');
-				}
-				break;
+	const hostParent = getHostParent(childToDelete);
+	function removeHostRoots(node: FiberNode) {
+		if (node.tag === HostComponent || node.tag === HostText) {
+			if (hostParent !== null) removeChild(node.stateNode, hostParent);
+			return;
 		}
-	});
-	//移除rootHostNode的Dom
-	if (rootHostNode !== null) {
-		const hostParent = getHostParent(childToDelete);
-		//
-		if (hostParent !== null) {
-			removeChild((rootHostNode as FiberNode).stateNode, hostParent);
+		let child = node.child;
+		while (child !== null) {
+			removeHostRoots(child);
+			child = child.sibling;
 		}
 	}
+	removeHostRoots(childToDelete);
+	commitNestedComponent(childToDelete, node => {
+		if (node.alternate !== null) node.alternate.return = null;
+	});
 	childToDelete.return = null;
 	childToDelete.child = null;
 }
