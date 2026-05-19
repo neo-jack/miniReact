@@ -10,6 +10,7 @@ import {
 } from './updateQueue';
 import { Action } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
+import { requestUpdateLane } from './fiberLanes';
 
 let currentlyRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
@@ -154,10 +155,12 @@ function dispatchSetState<State>(
 	updateQueue: UpdateQueue<State>,
 	action: Action<State>
 ) {
-	const update = createUpdate(action);
+	if (currentlyRenderingFiber !== null) throw new Error('暂不支持 render 阶段更新');
+	const lane = requestUpdateLane();
+	const update = createUpdate(action, lane);
 	enqueueUpdate(updateQueue, update);
 	//触发更新
-	scheduleUpdateOnFiber(fiber); //将更新移动的roothostfiber
+	scheduleUpdateOnFiber(fiber, lane);
 
 	// host更新
 	// 	// 1. 创建更新

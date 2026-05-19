@@ -4,6 +4,8 @@ import { completeWork } from './completeWork';
 import { createWorkInProgress, FiberNode, FiberRootNode } from './fiber';
 import { MutationMask, NoFlags } from './FiberFlags';
 import { HostRoot } from './workTags';
+import { Lane, SyncLane } from './fiberLanes';
+import { scheduleSyncCallback } from './syncTaskQueue';
 
 let workInProgress: FiberNode | null = null;
 
@@ -12,11 +14,19 @@ function prepareFreshStack(root: FiberRootNode) {
 	workInProgress = createWorkInProgress(root.current, {});
 }
 
-export function scheduleUpdateOnFiber(fiber: FiberNode) {
+export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane = SyncLane) {
 	//调度功能
 	const root = markUpdateFromFiberToRoot(fiber);
 	if (root !== null) {
-		rendeRoot(root);
+		root.pendingLanes |= lane;
+		if (!root.syncScheduled) {
+			root.syncScheduled = true;
+			scheduleSyncCallback(() => {
+				root.syncScheduled = false;
+				root.pendingLanes &= ~SyncLane;
+				rendeRoot(root);
+			});
+		}
 	}
 }
 

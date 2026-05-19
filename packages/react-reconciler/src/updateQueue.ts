@@ -1,8 +1,11 @@
 import { Dispatch } from 'react/src/currentDispatcher';
 import { Action } from 'shared/ReactTypes';
+import { Lane, SyncLane } from './fiberLanes';
 
 export interface Update<State> {
 	actions: Action<State>;
+	lane: Lane;
+	next: Update<State> | null;
 }
 
 export interface UpdateQueue<State> {
@@ -12,9 +15,9 @@ export interface UpdateQueue<State> {
 	dispatch: Dispatch<State> | null;
 }
 
-export const createUpdate = <State>(actions: Action<State>): Update<State> => {
+export const createUpdate = <State>(actions: Action<State>, lane: Lane = SyncLane): Update<State> => {
 	return {
-		actions
+		actions, lane, next: null
 	};
 };
 
@@ -31,6 +34,13 @@ export const enqueueUpdate = <Action>(
 	updateQueue: UpdateQueue<Action>,
 	update: Update<Action>
 ) => {
+	const pending = updateQueue.shared.pending;
+	if (pending === null) {
+		update.next = update;
+	} else {
+		update.next = pending.next;
+		pending.next = update;
+	}
 	updateQueue.shared.pending = update;
 };
 
@@ -43,14 +53,15 @@ export const processUpdateQueue = <State>(
 	};
 
 	if (pendingUpdate !== null) {
-		const action = pendingUpdate.actions;
-		if (action instanceof Function) {
-			// 如果是函数类型：baseState = 1, action = (s) => s + 1 -> result = 2
-			result.memoizedState = action(baseState);
-		} else {
-			// 如果是具体值类型：baseState = 1, action = 2 -> result = 2
-			result.memoizedState = action;
-		}
+		const first = pendingUpdate.next!;
+		let update = first;
+		do {
+			const action = update.actions;
+			result.memoizedState = typeof action === 'function'
+				? (action as (state: State) => State)(result.memoizedState)
+				: action;
+			update = update.next!;
+		} while (update !== first);
 	}
 
 	return result;

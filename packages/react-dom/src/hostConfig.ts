@@ -6,6 +6,7 @@ import { Props } from 'shared/ReactTypes';
 export type Container = Element;
 export type Instance = Element;
 export type TextInstance = Text;
+export const scheduleMicroTask = (callback: () => void) => queueMicrotask(callback);
 
 export const createInstance = (type: string, props: Props): Instance => {
 	//TODO: 处理props

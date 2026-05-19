@@ -60,6 +60,8 @@ export class FiberNode {
 }
 
 export class FiberRootNode {
+	pendingLanes = 0;
+	syncScheduled = false;
 	Container: Container;
 	current: FiberNode;
 	finishework: FiberNode | null;

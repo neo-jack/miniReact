@@ -13,7 +13,7 @@ test('delegates capture and bubble with correct currentTarget', () => {
 	expect(calls).toEqual([['pc', 'DIV'], ['cc', 'BUTTON'], ['cb', 'BUTTON'], ['pb', 'DIV']]);
 });
 
-test('uses latest committed callbacks and supports stopping propagation', () => {
+test('uses latest committed callbacks and supports stopping propagation', async () => {
 	const container = document.createElement('div');
 	const root = createRoot(container);
 	const parent = jest.fn();
@@ -26,7 +26,9 @@ test('uses latest committed callbacks and supports stopping propagation', () => 
 	}
 	root.render(<App />);
 	container.querySelector('button').click();
+	await Promise.resolve();
 	container.querySelector('button').click();
+	await Promise.resolve();
 	expect(container.textContent).toBe('2');
 	expect(parent).not.toHaveBeenCalled();
 });

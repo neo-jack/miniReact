@@ -7,6 +7,7 @@ import {
 } from 'react-reconciler/src/fiberReconciler';
 import { ReactElementType } from 'shared/ReactTypes';
 import { initEvent } from './SyntheticEvent';
+import { flushSyncCallbacks } from 'react-reconciler/src/syncTaskQueue';
 
 export function createRoot(container: Container ) {
 
@@ -19,6 +20,7 @@ const root = createContainer(container);
 	return {
 		render(element: ReactElementType | null) {
 			updatedContainer(element, root);
+			flushSyncCallbacks();
 		}
 	};
 }
