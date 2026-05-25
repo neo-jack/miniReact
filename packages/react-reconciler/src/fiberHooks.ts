@@ -11,6 +11,7 @@ import {
 import { Action } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
 import { requestUpdateLane } from './fiberLanes';
+import { Effect, EffectQueue, HookHasEffect, Passive } from './hookEffectTags';
 
 let currentlyRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
@@ -32,6 +33,7 @@ export function renderWithHooks(wip: FiberNode) {
 	currentHook = null;
 	//重置
 	wip.memoizedState = null;
+	wip.updateQueue = null;
 
 	const current = wip.alternate;
 
@@ -56,12 +58,43 @@ export function renderWithHooks(wip: FiberNode) {
 }
 
 const HookDispatcherOnMount: Dispatcher = {
-	useState: mountState
+	useState: mountState,
+	useEffect: mountEffect
 };
 
 const HookDispatcherOnUpdate: Dispatcher = {
-	useState: updateState
+	useState: updateState,
+	useEffect: updateEffect
 };
+
+function pushEffect(create: Effect['create'], deps: unknown[] | null, destroy: Effect['destroy'], changed: boolean) {
+	const effect = { create, deps, destroy, tag: Passive | (changed ? HookHasEffect : 0) } as Effect;
+	const fiber = currentlyRenderingFiber!;
+	let queue = fiber.updateQueue as EffectQueue | null;
+	if (queue === null) fiber.updateQueue = queue = { lastEffect: null };
+	const last = queue.lastEffect;
+	if (last === null) effect.next = effect;
+	else {
+		effect.next = last.next;
+		last.next = effect;
+	}
+	queue.lastEffect = effect;
+	return effect;
+}
+
+function mountEffect(create: Effect['create'], deps?: unknown[]) {
+	const hook = mountWorkInProgresHook();
+	hook.memoizedState = pushEffect(create, deps ?? null, undefined, true);
+}
+
+function updateEffect(create: Effect['create'], deps?: unknown[]) {
+	const hook = updateWorkInProgresHook();
+	const previous = hook.memoizedState as Effect;
+	const next = deps ?? null;
+	const equal = next !== null && previous.deps !== null && next.length === previous.deps.length
+		&& next.every((value, i) => Object.is(value, previous.deps![i]));
+	hook.memoizedState = pushEffect(create, next, previous.destroy, !equal);
+}
 
 function updateState<State>(
 

@@ -18,11 +18,6 @@ export default [
 				file: `${pkgDistPath}/index.js`,
 				name: 'ReactDOM',
 				format: 'umd'
-			},
-			{
-				file: `${pkgDistPath}/client.js`,
-				name: 'client',
-				format: 'umd'
 			}
 		],
 		external: [...Object.keys(peerDependencies), 'scheduler'],
@@ -50,6 +45,12 @@ export default [
 		]
 	},
 	//react-test-utils
+	{
+		input: `${pkgPath}/client.ts`,
+		output: { file: `${pkgDistPath}/client.js`, name: 'ReactDOMClient', format: 'umd' },
+		external: ['react-dom'],
+		plugins: getBaseRollupPlugins()
+	},
 	{
 		input: `${pkgPath}/test-utils.ts`,
 		output: [

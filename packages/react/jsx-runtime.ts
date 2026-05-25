@@ -1,1 +1,2 @@
 export { jsx, jsxs, Fragment } from './src/jsx';
+export type { JSX } from './src/jsx-types';

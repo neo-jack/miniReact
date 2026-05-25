@@ -8,6 +8,9 @@ import {
 import { ReactElementType } from 'shared/ReactTypes';
 import { initEvent } from './SyntheticEvent';
 import { flushSyncCallbacks } from 'react-reconciler/src/syncTaskQueue';
+import { flushPassiveEffects } from 'react-reconciler/src/passiveEffects';
+
+export const __TEST_INTERNALS = { flushSyncCallbacks, flushPassiveEffects };
 
 export function createRoot(container: Container ) {
 

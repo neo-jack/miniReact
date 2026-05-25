@@ -23,6 +23,29 @@ import {
 
 let nextEffect: FiberNode | null = null;
 
+import { EffectQueue, HookHasEffect } from './hookEffectTags';
+import { enqueuePassiveEffect } from './passiveEffects';
+
+export function collectPassiveEffects(fiber: FiberNode, deleted = false) {
+	if (fiber.tag !== FunctionComponent) return;
+	const last = (fiber.updateQueue as EffectQueue | null)?.lastEffect;
+	if (!last) return;
+	let effect = last.next;
+	do {
+		if (deleted || (effect.tag & HookHasEffect)) enqueuePassiveEffect(effect, deleted);
+		effect = effect.next;
+	} while (effect !== last.next);
+}
+
+export function commitPassiveEffects(root: FiberNode) {
+	let child = root.child;
+	while (child !== null) {
+		commitPassiveEffects(child);
+		child = child.sibling;
+	}
+	collectPassiveEffects(root);
+}
+
 export const commitMutationEffects = (finisheWork: FiberNode) => {
 	nextEffect = finisheWork;
 	while (nextEffect != null) {
@@ -82,6 +105,7 @@ function commitDeletion(childToDelete: FiberNode) {
 	}
 	removeHostRoots(childToDelete);
 	commitNestedComponent(childToDelete, node => {
+		collectPassiveEffects(node, true);
 		if (node.alternate !== null) node.alternate.return = null;
 	});
 	childToDelete.return = null;

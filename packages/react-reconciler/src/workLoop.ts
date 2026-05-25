@@ -1,5 +1,6 @@
 import { beginWork } from './beginWork';
-import { commitMutationEffects } from './commitWork';
+import { commitMutationEffects, commitPassiveEffects } from './commitWork';
+import { flushPassiveEffects, schedulePassiveEffects } from './passiveEffects';
 import { completeWork } from './completeWork';
 import { createWorkInProgress, FiberNode, FiberRootNode } from './fiber';
 import { MutationMask, NoFlags } from './FiberFlags';
@@ -48,6 +49,7 @@ function markUpdateFromFiberToRoot(fiber: FiberNode) {
 
 //通过Dfs实现渲染更新
 function rendeRoot(root: FiberRootNode) {
+	flushPassiveEffects();
 	prepareFreshStack(root);
 	try {
 		workloop();
@@ -93,6 +95,8 @@ function commitRoot(root: FiberRootNode) {
 	} else {
 		root.current=finisheWork
 	}
+	commitPassiveEffects(finisheWork);
+	schedulePassiveEffects();
 }
 
 //DFS-递归函数
