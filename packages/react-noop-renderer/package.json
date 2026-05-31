@@ -1,0 +1,11 @@
+{
+  "name": "react-noop-renderer",
+  "version": "1.0.0",
+  "module": "index.ts",
+  "dependencies": {
+    "react-reconciler": "workspace:*",
+    "shared": "workspace:*",
+    "scheduler": "^0.23.0"
+  },
+  "peerDependencies": { "react": "workspace:*" }
+}

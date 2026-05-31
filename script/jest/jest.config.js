@@ -7,6 +7,7 @@ module.exports = {
 	modulePathIgnorePatterns: ['<rootDir>/.history'],
 	// 显式测试构建产物，避免 pnpm workspace 将裸导入解析到 TypeScript 源码。
 	moduleNameMapper: {
+		'^react-noop-renderer$': '<rootDir>/dist/node_modules/react-noop-renderer/index.js',
 		'^react$': '<rootDir>/dist/node_modules/react/index.js',
 		'^react/jsx-runtime$': '<rootDir>/dist/node_modules/react/jsx-runtime.js',
 		'^react/jsx-dev-runtime$':
