@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scheduler 实验</title>
+    <style>
+      body { max-width: 800px; margin: 48px auto; padding: 0 20px; font: 16px/1.6 system-ui; }
+      button { padding: 8px 16px; margin: 0 8px 12px 0; }
+      pre { white-space: pre-wrap; background: #f3f4f6; padding: 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>Scheduler 优先级与时间切片</h1>
+    <p>低优先级任务按小单元执行并主动让出线程。可添加高优先级任务，或取消尚未完成的低优先级任务。</p>
+    <button id="low">低优先级任务</button>
+    <button id="high">高优先级任务</button>
+    <button id="cancel">取消低优先级任务</button>
+    <pre id="output" aria-live="polite">等待任务</pre>
+    <script type="module" src="/scheduler.ts"></script>
+  </body>
+</html>
