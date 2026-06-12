@@ -5,111 +5,140 @@ import { completeWork } from './completeWork';
 import { createWorkInProgress, FiberNode, FiberRootNode } from './fiber';
 import { MutationMask, NoFlags } from './FiberFlags';
 import { HostRoot } from './workTags';
-import { Lane, SyncLane } from './fiberLanes';
-import { scheduleSyncCallback } from './syncTaskQueue';
+import { Lane, NoLane, SyncLane, getHighestPriorityLane, laneToSchedulerPriority } from './fiberLanes';
+import { scheduleSyncCallback, flushSyncCallbacks } from './syncTaskQueue';
+import {
+	unstable_scheduleCallback as scheduleCallback,
+	unstable_cancelCallback as cancelCallback,
+	unstable_shouldYield as shouldYield
+} from 'scheduler';
 
 let workInProgress: FiberNode | null = null;
-
-function prepareFreshStack(root: FiberRootNode) {
-	//DFS-初始化
-	workInProgress = createWorkInProgress(root.current, {});
-}
+let renderingRoot: FiberRootNode | null = null;
+let renderLane: Lane = NoLane;
+let renderVersion = 0;
+const scheduledRoots = new Set<FiberRootNode>();
 
 export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane = SyncLane) {
-	//调度功能
-	const root = markUpdateFromFiberToRoot(fiber);
-	if (root !== null) {
-		root.pendingLanes |= lane;
+	let node = fiber;
+	while (node.return !== null) node = node.return;
+	if (node.tag !== HostRoot) return;
+	const root = node.stateNode as FiberRootNode;
+	root.pendingLanes |= lane;
+	root.updateVersion++;
+	scheduledRoots.add(root);
+	ensureRootIsScheduled(root);
+}
+
+function ensureRootIsScheduled(root: FiberRootNode) {
+	const lane = getHighestPriorityLane(root.pendingLanes);
+	if (lane === root.callbackPriority) return;
+	if (root.callbackNode !== null) cancelCallback(root.callbackNode);
+	root.callbackNode = null;
+	root.callbackPriority = lane;
+	if (lane === NoLane) {
+		scheduledRoots.delete(root);
+		return;
+	}
+	if (lane === SyncLane) {
 		if (!root.syncScheduled) {
 			root.syncScheduled = true;
 			scheduleSyncCallback(() => {
 				root.syncScheduled = false;
-				root.pendingLanes &= ~SyncLane;
-				rendeRoot(root);
+				flushPassiveEffects();
+				if (getHighestPriorityLane(root.pendingLanes) !== SyncLane) return;
+				renderRoot(root, SyncLane, false);
+				finishRoot(root, SyncLane);
 			});
 		}
+	} else {
+		root.callbackNode = scheduleCallback(laneToSchedulerPriority(lane),
+			(didTimeout) => performConcurrentWork(root, didTimeout));
 	}
 }
 
-//找到FiberRootNode
-function markUpdateFromFiberToRoot(fiber: FiberNode) {
-	let node = fiber;
-	let parent = node.return;
-
-	while (parent !== null) {
-		node = parent;
-		parent = node.return;
-	}
-	if (node.tag === HostRoot) {
-		return node.stateNode;
-	}
-
+function performConcurrentWork(root: FiberRootNode, didTimeout: boolean): any {
+	const callback = root.callbackNode;
+	flushPassiveEffects();
+	if (callback !== root.callbackNode) return null;
+	const lane = getHighestPriorityLane(root.pendingLanes);
+	if (lane === NoLane || lane === SyncLane) return null;
+	const completed = renderRoot(root, lane, !didTimeout);
+	if (callback !== root.callbackNode) return null;
+	if (!completed) return (timeout: boolean) => performConcurrentWork(root, timeout);
+	finishRoot(root, lane);
 	return null;
 }
 
-//通过Dfs实现渲染更新
-function rendeRoot(root: FiberRootNode) {
-	flushPassiveEffects();
-	prepareFreshStack(root);
+function renderRoot(root: FiberRootNode, lane: Lane, timeSlice: boolean) {
+	if (renderingRoot !== root || renderLane !== lane || renderVersion !== root.updateVersion) {
+		renderingRoot = root;
+		renderLane = lane;
+		renderVersion = root.updateVersion;
+		root.finishework = null;
+		workInProgress = createWorkInProgress(root.current, {});
+	}
 	try {
-		workloop();
+		while (workInProgress !== null && (!timeSlice || !shouldYield())) {
+			performUnitOfWork(workInProgress);
+		}
 	} catch (error) {
 		workInProgress = null;
+		renderingRoot = null;
+		renderLane = NoLane;
 		root.finishework = null;
+		root.pendingLanes &= ~lane;
+		root.callbackPriority = NoLane;
+		if (root.callbackNode !== null) cancelCallback(root.callbackNode);
+		root.callbackNode = null;
+		if (root.pendingLanes === NoLane) scheduledRoots.delete(root);
+		else ensureRootIsScheduled(root);
 		throw error;
 	}
-
-	const finishework = root.current.alternate;
-
-	root.finishework = finishework;
-
-	//wip fiberNode树 树中的flags
-	commitRoot(root);
+	return workInProgress === null;
 }
 
-function commitRoot(root: FiberRootNode) {
-	const finisheWork = root.finishework;
-	if (finisheWork === null) {
-		return;
+function finishRoot(root: FiberRootNode, lane: Lane) {
+	const finishedWork = root.current.alternate!;
+	root.pendingLanes &= ~lane;
+	root.callbackPriority = NoLane;
+	root.callbackNode = null;
+	renderingRoot = null;
+	renderLane = NoLane;
+	root.finishework = finishedWork;
+	if (((finishedWork.flags | finishedWork.subtreeFlags) & MutationMask) !== NoFlags) {
+		commitMutationEffects(finishedWork);
 	}
-
-	if (__DEV__) {
-		console.warn('commit阶段开始');
-	}
-
-	//重置
+	root.current = finishedWork;
 	root.finishework = null;
-
-	//判断是否执行
-	// root flags root subtreeFlags
-	const subtreeHasEffect =
-		(finisheWork.subtreeFlags & MutationMask) !== NoFlags;
-	const rootHasEffect = (finisheWork.flags & MutationMask) !== NoFlags;
-
-	if (subtreeHasEffect || rootHasEffect) {
-		//beformutation
-		commitMutationEffects(finisheWork);
-		//mutation
-		root.current=finisheWork
-		//layout
-	} else {
-		root.current=finisheWork
-	}
-	commitPassiveEffects(finisheWork);
+	commitPassiveEffects(finishedWork);
 	schedulePassiveEffects();
+	if (root.pendingLanes === NoLane) scheduledRoots.delete(root);
+	ensureRootIsScheduled(root);
 }
 
-//DFS-递归函数
-function workloop() {
-	while (workInProgress !== null) {
-		performUnitOfWork(workInProgress);
+// Deterministic test flushing, not a production scheduling path.
+export function flushAllWork() {
+	let passes = 0;
+	while (scheduledRoots.size > 0) {
+		if (++passes > 1000) throw new Error('Too many scheduled updates');
+		flushPassiveEffects();
+		flushSyncCallbacks();
+		const root = scheduledRoots.values().next().value as FiberRootNode | undefined;
+		if (!root) break;
+		const lane = getHighestPriorityLane(root.pendingLanes);
+		if (lane === NoLane) { scheduledRoots.delete(root); continue; }
+		if (root.callbackNode !== null) cancelCallback(root.callbackNode);
+		root.callbackNode = null;
+		renderRoot(root, lane, false);
+		finishRoot(root, lane);
 	}
 }
 
 //DFS-遍历
 function performUnitOfWork(fiber: FiberNode) {
 	//DFS-递
-	const next = beginWork(fiber);
+	const next = beginWork(fiber, renderLane);
 	fiber.memoizedProps = fiber.penddingProps;
 	if (next === null) {
 		//DFS-归

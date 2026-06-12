@@ -6,29 +6,33 @@ import {
 	createUpdateQueue,
 	enqueueUpdate,
 	processUpdateQueue,
-	UpdateQueue
+	UpdateQueue, Update, mergeUpdateQueues
 } from './updateQueue';
 import { Action } from 'shared/ReactTypes';
 import { scheduleUpdateOnFiber } from './workLoop';
-import { requestUpdateLane } from './fiberLanes';
+import { requestUpdateLane, Lane, NoLane } from './fiberLanes';
 import { Effect, EffectQueue, HookHasEffect, Passive } from './hookEffectTags';
 
 let currentlyRenderingFiber: FiberNode | null = null;
 let workInProgressHook: Hook | null = null;
 let currentHook: Hook | null = null;
+let renderLane: Lane = NoLane;
 
 const { currentDispatcher } = internals;
 
 //fiber的memoizedState
 interface Hook {
+	baseState: any;
+	baseQueue: Update<any> | null;
 	memoizedState: any; //hook保存的状态
 	updateQueue: unknown;
 	next: Hook | null;
 }
 
-export function renderWithHooks(wip: FiberNode) {
+export function renderWithHooks(wip: FiberNode, lane: Lane) {
 	//赋值操作
 	currentlyRenderingFiber = wip;
+	renderLane = lane;
 	workInProgressHook = null;
 	currentHook = null;
 	//重置
@@ -54,6 +58,7 @@ export function renderWithHooks(wip: FiberNode) {
 		workInProgressHook = null;
 		currentHook = null;
 		currentDispatcher.current = null;
+		renderLane = NoLane;
 	}
 }
 
@@ -104,12 +109,14 @@ function updateState<State>(
 
 	//计算新state的逻辑
 	const queue = hook.updateQueue as UpdateQueue<State>;
-	const pending = queue.shared.pending;
+	const previous = currentHook!;
+	const baseQueue = mergeUpdateQueues(previous.baseQueue, queue.shared.pending);
+	previous.baseQueue = baseQueue;
 	queue.shared.pending = null;
-	if (pending != null) {
-		const { memoizedState } = processUpdateQueue(hook.memoizedState, pending);
-		hook.memoizedState = memoizedState;
-	}
+	const result = processUpdateQueue(hook.baseState, baseQueue, renderLane);
+	hook.memoizedState = result.memoizedState;
+	hook.baseState = result.baseState;
+	hook.baseQueue = result.baseQueue;
 
 	return [hook.memoizedState, queue.dispatch as Dispatch<State>];
 }
@@ -141,6 +148,8 @@ function updateWorkInProgresHook(): Hook {
 	currentHook = nextCurrentHook as Hook;
 	const newHook: Hook = {
 		memoizedState: currentHook.memoizedState,
+		baseState: currentHook.baseState,
+		baseQueue: currentHook.baseQueue,
 		updateQueue: currentHook.updateQueue,
 		next: null
 	};
@@ -174,6 +183,7 @@ function mountState<State>(
 	}
 	const queue = createUpdateQueue<State>();
 	hook.memoizedState = memoizedState; //更新
+	hook.baseState = memoizedState;
 	hook.updateQueue = queue;
 
 	// @ts-ignore
@@ -210,6 +220,8 @@ function dispatchSetState<State>(
 function mountWorkInProgresHook(): Hook {
 	const hook: Hook = {
 		memoizedState: null,
+		baseState: null,
+		baseQueue: null,
 		updateQueue: null,
 		next: null
 	};

@@ -1,5 +1,6 @@
 const React = require('react');
 const { createRoot } = require('react-dom/client');
+const { act } = require('react-dom/test-utils');
 
 describe('single node updates', () => {
 	it('reuses matching DOM and replaces a different type or key', () => {
@@ -33,7 +34,7 @@ describe('single node updates', () => {
 		}
 	});
 
-	it('keeps hook cursors and consumed updates isolated across renders', () => {
+	it('keeps hook cursors and consumed updates isolated across renders', async () => {
 		const container = document.createElement('div');
 		const root = createRoot(container);
 		let setFirst;
@@ -55,6 +56,7 @@ describe('single node updates', () => {
 		for (let i = 0; i < 10; i++) setFirst(n => n + 1);
 		setSecond(3);
 		setChild(n => n + 1);
+		await act(() => {});
 		root.render(<App />);
 		expect(container.textContent).toBe('10:3:1');
 		expect(() => React.useState(0)).toThrow();

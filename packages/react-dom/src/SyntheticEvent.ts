@@ -1,4 +1,5 @@
 import { Props } from 'shared/ReactTypes';
+import { unstable_runWithPriority as runWithPriority, unstable_ImmediatePriority as ImmediatePriority } from 'scheduler';
 
 const propsKey = '__miniReactProps';
 type DOMElement = Element & { [propsKey]?: Props };
@@ -45,7 +46,7 @@ export function initEvent(container: Element) {
 		try {
 			for (const listener of [...capture, ...bubble]) {
 				currentTarget = listener.node;
-				listener.callback(event);
+				runWithPriority(ImmediatePriority, () => listener.callback(event));
 				if (stopped) break;
 			}
 		} finally {

@@ -44,25 +44,49 @@ export const enqueueUpdate = <Action>(
 	updateQueue.shared.pending = update;
 };
 
-export const processUpdateQueue = <State>(
-	baseState: State,
-	pendingUpdate: Update<State> | null
-): { memoizedState: State } => {
-	const result: { memoizedState: State } = {
-		memoizedState: baseState
-	};
+// Merge circular queues without dropping updates from an interrupted render.
+export function mergeUpdateQueues<State>(base: Update<State> | null, pending: Update<State> | null) {
+	if (pending === null) return base;
+	if (base !== null) {
+		const first = base.next;
+		base.next = pending.next;
+		pending.next = first;
+	}
+	return pending;
+}
 
-	if (pendingUpdate !== null) {
-		const first = pendingUpdate.next!;
+export function processUpdateQueue<State>(
+	baseState: State,
+	pending: Update<State> | null,
+	renderLane: Lane = SyncLane
+) {
+	let state = baseState;
+	let newBaseState = baseState;
+	let firstSkipped: Update<State> | null = null;
+	let lastSkipped: Update<State> | null = null;
+	function append(update: Update<State>) {
+		if (lastSkipped === null) firstSkipped = lastSkipped = update;
+		else {
+			lastSkipped.next = update;
+			lastSkipped = update;
+		}
+	}
+	if (pending !== null) {
+		const first = pending.next!;
 		let update = first;
 		do {
-			const action = update.actions;
-			result.memoizedState = typeof action === 'function'
-				? (action as (state: State) => State)(result.memoizedState)
-				: action;
+			if (update.lane !== 0 && (update.lane & renderLane) === 0) {
+				if (lastSkipped === null) newBaseState = state;
+				append({...update, next: null});
+			} else {
+				if (lastSkipped !== null) append({...update, lane: 0, next: null});
+				const action = update.actions;
+				state = typeof action === 'function' ? (action as (value: State) => State)(state) : action;
+			}
 			update = update.next!;
 		} while (update !== first);
 	}
-
-	return result;
-};
+	if (lastSkipped === null) newBaseState = state;
+	else (lastSkipped as Update<State>).next = firstSkipped;
+	return { memoizedState: state, baseState: newBaseState, baseQueue: lastSkipped as Update<State> | null };
+}

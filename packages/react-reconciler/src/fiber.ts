@@ -4,8 +4,12 @@ import { Props, Key, Ref } from 'shared/ReactTypes';
 import { WorkTag } from './workTags';
 import { Flags, NoFlags } from './FiberFlags';
 import { Container } from 'hostConfig';
+import type { Update } from './updateQueue';
+import type { CallbackNode } from 'scheduler';
 
 export class FiberNode {
+	baseState: any = null;
+	baseQueue: Update<any> | null = null;
 	//基础属性
 	type: any; //小类型
 	tag: WorkTag; //大类型
@@ -60,6 +64,9 @@ export class FiberNode {
 }
 
 export class FiberRootNode {
+	callbackNode: CallbackNode | null = null;
+	callbackPriority = 0;
+	updateVersion = 0;
 	pendingLanes = 0;
 	syncScheduled = false;
 	Container: Container;
@@ -96,6 +103,8 @@ export const createWorkInProgress = (
 	wip.child = current.child;
 	wip.memoizedState = current.memoizedState;
 	wip.memoizedProps = current.memoizedProps;
+	wip.baseState = current.baseState;
+	wip.baseQueue = current.baseQueue;
 
 	return wip;
 };

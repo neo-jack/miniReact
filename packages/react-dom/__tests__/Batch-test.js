@@ -1,5 +1,6 @@
 const React = require('react');
 const { createRoot } = require('react-dom/client');
+const { act } = require('react-dom/test-utils');
 
 test('batches functional updates and preserves action order', async () => {
 	const container = document.createElement('div');
@@ -16,13 +17,13 @@ test('batches functional updates and preserves action order', async () => {
 	dispatch(n => n + 1);
 	dispatch(n => n + 1);
 	expect(container.textContent).toBe('0');
-	await Promise.resolve();
+	await act(() => {});
 	expect(container.textContent).toBe('3');
 	expect(renders).toBe(2);
 	dispatch(4);
 	dispatch(4);
 	dispatch(n => n * 2);
-	await Promise.resolve();
+	await act(() => {});
 	expect(container.textContent).toBe('8');
 	expect(renders).toBe(3);
 });

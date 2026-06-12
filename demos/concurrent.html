@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>miniReact 并发更新</title>
+    <style>
+      body { max-width: 900px; margin: 32px auto; padding: 0 20px; font: 16px/1.6 system-ui; }
+      button { margin-right: 8px; padding: 8px 16px; }
+      #status { padding: 12px; background: #eef2ff; }
+      ul { max-height: 400px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>miniReact 并发更新</h1>
+    <p>启动低优先级列表更新，再点击紧急计数。列表渲染可以让出线程，DOM 在整棵工作树完成后统一提交。</p>
+    <button id="slow">低优先级：展开列表</button>
+    <button id="urgent">高优先级：计数 +1</button>
+    <button id="reset">重置列表</button>
+    <p id="status" aria-live="polite">等待首次提交</p>
+    <div id="root"></div>
+    <script type="module" src="/concurrent.tsx"></script>
+  </body>
+</html>

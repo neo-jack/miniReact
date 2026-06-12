@@ -229,6 +229,9 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 		currentFiber: FiberNode | null,
 		newChild?: any
 	) {
+		if (Array.isArray(newChild)) {
+			return reconcileChildrenArray(returnFiber, currentFiber, newChild);
+		}
 		// 判断当前fiber的类型
 		if (typeof newChild === 'object' && newChild !== null) {
 			switch (newChild.$$typeof) {
@@ -241,10 +244,6 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 						console.warn('未实现的reconcile类型', newChild);
 					}
 					break;
-			}
-			// 多节点的情况 ul> li*3
-			if (Array.isArray(newChild)) {
-				return reconcileChildrenArray(returnFiber, currentFiber, newChild);
 			}
 		}
 

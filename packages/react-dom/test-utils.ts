@@ -10,6 +10,6 @@ export function renderIntoDocument(element: ReactElementType) {
 export async function act(callback: () => void | Promise<void>) {
 	await callback();
 	do {
-		__TEST_INTERNALS.flushSyncCallbacks();
+		__TEST_INTERNALS.flushAllWork();
 	} while (__TEST_INTERNALS.flushPassiveEffects());
 }

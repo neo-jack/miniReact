@@ -1,6 +1,7 @@
+import { Lane } from './fiberLanes';
 import { ReactElementType } from 'shared/ReactTypes';
 import { FiberNode } from './fiber';
-import { UpdateQueue, processUpdateQueue } from './updateQueue';
+import { UpdateQueue, processUpdateQueue, mergeUpdateQueues } from './updateQueue';
 import {
 	FunctionComponent,
 	Fragment,
@@ -12,17 +13,17 @@ import { reconcileChildFibers, mountChildFibers } from './childFibers';
 import { renderWithHooks } from './fiberHooks';
 
 //递归的递
-export const beginWork = (wip: FiberNode) => {
+export const beginWork = (wip: FiberNode, lane: Lane) => {
 	switch (wip.tag) {
 		case HostRoot:
-			return updateHostRoot(wip);
+			return updateHostRoot(wip, lane);
 		case HostComponent:
 		case Fragment:
 			return updateHostComponent(wip);
 		case HostText:
 			return null;
 		case FunctionComponent:
-			return updateFunctionComponent(wip);
+			return updateFunctionComponent(wip, lane);
 		default:
 			if (__DEV__) {
 				console.warn('beginWork为实现的类型');
@@ -34,23 +35,23 @@ export const beginWork = (wip: FiberNode) => {
 	return null;
 };
 
-function updateFunctionComponent(wip: FiberNode) {
-	const nextChildren = renderWithHooks(wip);
+function updateFunctionComponent(wip: FiberNode, lane: Lane) {
+	const nextChildren = renderWithHooks(wip, lane);
 	reconcileChildren(wip, nextChildren);
 	return wip.child;
 }
 
-function updateHostRoot(wip: FiberNode) {
-	const baseState = wip.memoizedState;
-	const updateQueue = wip.updateQueue as UpdateQueue<Element>;
-	const pending = updateQueue.shared.pending;
-	updateQueue.shared.pending = null;
-
-	const { memoizedState } = processUpdateQueue(baseState, pending);
-	wip.memoizedState = memoizedState;
-
-	const nextchildren = wip.memoizedState;
-	reconcileChildren(wip, nextchildren);
+function updateHostRoot(wip: FiberNode, lane: Lane) {
+	const queue = wip.updateQueue as UpdateQueue<ReactElementType | null>;
+	const current = wip.alternate!;
+	const baseQueue = mergeUpdateQueues(current.baseQueue, queue.shared.pending);
+	current.baseQueue = baseQueue;
+	queue.shared.pending = null;
+	const result = processUpdateQueue(wip.baseState, baseQueue, lane);
+	wip.memoizedState = result.memoizedState;
+	wip.baseState = result.baseState;
+	wip.baseQueue = result.baseQueue;
+	reconcileChildren(wip, wip.memoizedState);
 	return wip.child;
 }
 

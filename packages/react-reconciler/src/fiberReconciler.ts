@@ -9,6 +9,7 @@ import {
 } from './updateQueue';
 import { HostRoot } from './workTags';
 import { scheduleUpdateOnFiber } from './workLoop';
+import { Lane, SyncLane } from './fiberLanes';
 
 export function createContainer(container: Container) {
 	const hostRootFiber = new FiberNode(HostRoot, {}, null);
@@ -19,17 +20,18 @@ export function createContainer(container: Container) {
 
 export function updatedContainer(
 	reactElement: ReactElementType | null,
-	root: FiberRootNode
+	root: FiberRootNode,
+	lane: Lane = SyncLane
 ) {
 	const hostRootFiber = root.current;
 	// 1. 创建更新
-	const update = createUpdate<ReactElementType | null>(reactElement);
+	const update = createUpdate<ReactElementType | null>(reactElement, lane);
 	// 2. 入队
 	enqueueUpdate(
 		hostRootFiber.updateQueue as UpdateQueue<ReactElementType | null>,
 		update
 	);
-	scheduleUpdateOnFiber(hostRootFiber)
+	scheduleUpdateOnFiber(hostRootFiber, lane)
 
 	// TODO: return reactElement;
 }
